@@ -119,7 +119,13 @@ public class App {
         } else if (schema instanceof ArraySchema) {
             return schema.getExample() != null ? schema.getExample() : new Object[]{};
         } else if (schema instanceof StringSchema) {
-            return schema.getExample() != null ? schema.getExample() : "string";
+            if (schema.getExample() != null) {
+                return schema.getExample();
+            } else if (schema.getEnum()!=null && !schema.getEnum().isEmpty()) {
+                return schema.getEnum().get(0).toString();
+            } else {
+                return "string";
+            }
         } else if (schema instanceof IntegerSchema) {
             return schema.getExample() != null ? schema.getExample() : 0;
         } else if (schema instanceof BooleanSchema) {
@@ -129,13 +135,15 @@ public class App {
         } else if (schema instanceof DateSchema) {
             return schema.getExample() != null ? schema.getExample() : LocalDate.now().toString();
         } else if (schema instanceof DateTimeSchema) {
-            return schema.getExample() != null ? schema.getExample() : LocalDateTime.now().format(DateTimeFormatter.ISO_DATE_TIME);
+            return schema.getExample() != null ? schema.getExample() : LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"));
         } else if (schema instanceof BinarySchema) {
             return schema.getExample() != null ? schema.getExample() : "string";
         } else if (schema instanceof ByteArraySchema) {
             return schema.getExample() != null ? schema.getExample() : "string";
         } else if (schema instanceof EmailSchema) {
             return schema.getExample() != null ? schema.getExample() : "user@example.com";
+        } else if (schema instanceof FileSchema) {
+            return schema.getExample() != null ? schema.getExample() : "string";
         } else if (schema instanceof PasswordSchema) {
             return schema.getExample() != null ? schema.getExample() : "string";
         } else if (schema instanceof UUIDSchema) {

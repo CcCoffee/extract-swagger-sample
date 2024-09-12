@@ -729,44 +729,44 @@ components:
         - photoUrls
       type: object
       properties:
-        IntegerSchemaWithInt64Format:
-          type: integer
-          format: int64
-        IntegerSchemaWithoutInt32:
-          type: integer
-        IntegerSchemaWithInt32:
-          type: integer
-          format: int32
-        NumberSchema:
-          type: number
-        BooleanSchema:
-          type: boolean
-        StringSchema:
-          type: string
-        DateTimeSchema:
-          type: string
-          format: date-time
-        DateSchema:
-          type: string
-          format: date
-        BinarySchema:
-          type: string
-          format: binary
-        FileSchema:
-          type: string
-          format: binary
-        ByteArraySchema:
-          type: string
-          format: byte
-        EmailSchema:
-          type: string
-          format: email
-        PasswordSchema:
-          type: string
-          format: password
-        UUIDSchema:
-          type: string
-          format: uuid
+#        IntegerSchemaWithInt64Format:
+#          type: integer
+#          format: int64
+#        IntegerSchemaWithoutInt32:
+#          type: integer
+#        IntegerSchemaWithInt32:
+#          type: integer
+#          format: int32
+#        NumberSchema:
+#          type: number
+#        BooleanSchema:
+#          type: boolean
+#        StringSchema:
+#          type: string
+#        DateTimeSchema:
+#          type: string
+#          format: date-time
+#        DateSchema:
+#          type: string
+#          format: date
+#        BinarySchema:
+#          type: string
+#          format: binary
+#        FileSchema:
+#          type: string
+#          format: binary
+#        ByteArraySchema:
+#          type: string
+#          format: byte
+#        EmailSchema:
+#          type: string
+#          format: email
+#        PasswordSchema:
+#          type: string
+#          format: password
+#        UUIDSchema:
+#          type: string
+#          format: uuid
         enum:
           type: string
           description: pet status in the store
