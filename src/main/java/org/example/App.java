@@ -3,17 +3,17 @@ package org.example;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import io.swagger.models.*;
+import io.swagger.models.properties.*;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.Paths;
 import io.swagger.v3.oas.models.media.*;
 import io.swagger.v3.parser.OpenAPIV3Parser;
 import io.swagger.v3.parser.core.models.SwaggerParseResult;
-import io.swagger.models.Swagger;
 import io.swagger.parser.SwaggerParser;
 import io.swagger.v3.oas.models.Operation;
 import io.swagger.v3.oas.models.responses.ApiResponse;
 import io.swagger.v3.oas.models.responses.ApiResponses;
-import io.swagger.models.HttpMethod;
 
 import java.io.File;
 import java.io.IOException;
@@ -34,8 +34,8 @@ public class App {
         System.out.println("Hello World!");
 
         try {
-            Map<HttpMethod,String> sampleResponse = getSampleResponse("src/main/resources/static/api.yml", "/pet");
-            // Map<HttpMethod,String> sampleResponse = getSampleResponse("src/main/resources/static/swagger-2.0.yml", "/pet");;
+            // Map<HttpMethod,String> sampleResponse = getSampleResponse("src/main/resources/static/api.yml", "/pet");
+            Map<HttpMethod,String> sampleResponse = getSampleResponse("src/main/resources/static/swagger-2.0.yml", "/pet/findByStatus");;
             System.out.println(sampleResponse);
         } catch (IOException e) {
             e.printStackTrace();
@@ -117,7 +117,11 @@ public class App {
 
     private static String getSwagger2ResponseForOperation(io.swagger.models.Operation operation) throws IOException {
         io.swagger.models.Response response = operation.getResponses().get("200");
-        Object example = response.getExamples().get("application/json");
+        if (response == null) {
+            return "{}"; // 或者返回一个默认的空JSON对象
+        }
+
+        Object example = response.getExamples() != null ? response.getExamples().get("application/json") : null;
 
         if (example == null) {
             io.swagger.models.Model schema = response.getResponseSchema();
@@ -129,9 +133,132 @@ public class App {
     }
 
     private static Object generateExampleFromSwagger2Schema(io.swagger.models.Model schema) {
-        // 实现Swagger 2.0的示例生成逻辑
-        // 类似于generateExampleFromSchema方法
-        return null; // 具体实现略
+        if (schema instanceof ArrayModel) {
+            Property property = ((ArrayModel) schema).getItems();
+            if (property instanceof RefProperty) {
+                RefProperty refModel = (RefProperty) property;
+                Model ref = resolveSwagger2SchemaReference(refModel.get$ref());
+                return generateExampleFromSwagger2Schema(ref);
+            } else {
+                return getDefaultExampleValueForSwagger2((Model) property);
+            }
+        } else if (schema instanceof RefModel) {
+            RefModel refModel = (RefModel) schema;
+            io.swagger.models.Model refSchema = resolveSwagger2SchemaReference(refModel.get$ref());
+            return generateExampleFromSwagger2Schema(refSchema);
+        } else if (schema instanceof ModelImpl) {
+            ModelImpl modelImpl = (ModelImpl) schema;
+            Map<String, Object> example = new HashMap<>();
+            if (modelImpl.getProperties() != null) {
+                modelImpl.getProperties().forEach((key, value) -> {
+                    Property property = value;
+                    example.put(key, generateExampleFromSwagger2Property(property));
+                });
+            }
+            return example;
+        } else if (schema instanceof ComposedModel) {
+            ComposedModel composedModel = (ComposedModel) schema;
+            if (composedModel.getAllOf() != null && !composedModel.getAllOf().isEmpty()) {
+                return generateExampleFromSwagger2Schema(composedModel.getAllOf().get(0));
+            } else {
+                return getDefaultExampleValueForSwagger2(schema);
+            }
+        } else {
+            return getDefaultExampleValueForSwagger2(schema);
+        }
+    }
+
+    private static Object generateExampleFromSwagger2Property(Property property) {
+        if (property instanceof LongProperty) {
+            return property.getExample() != null ? property.getExample() : 0L;
+        } else if (property instanceof IntegerProperty) {
+            return property.getExample() != null ? property.getExample() : 0;
+        } else if (property instanceof BooleanProperty) {
+            return property.getExample() != null ? property.getExample() : true;
+        } else if (property instanceof StringProperty) {
+            if (property.getExample() != null) {
+                return property.getExample();
+            } else if (((StringProperty) property).getEnum() != null && !((StringProperty) property).getEnum().isEmpty()) {
+                return ((StringProperty) property).getEnum().get(0);
+            } else {
+                return "string";
+            }
+        } else if (property instanceof ArrayProperty) {
+            Property items = ((ArrayProperty) property).getItems();
+            return new Object[]{generateExampleFromSwagger2Property(items)};
+        } else if (property instanceof MapProperty) {
+            Property additionalProperties = ((MapProperty) property).getAdditionalProperties();
+            Map<String, Object> exampleMap = new HashMap<>();
+            exampleMap.put("key", generateExampleFromSwagger2Property(additionalProperties));
+            return exampleMap;
+        } else if (property instanceof DateProperty) {
+            return property.getExample() != null ? property.getExample() : LocalDate.now().toString();
+        } else if (property instanceof DateTimeProperty) {
+            return property.getExample() != null ? property.getExample() : LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"));
+        } else if (property instanceof BinaryProperty || property instanceof ByteArrayProperty || property instanceof FileProperty) {
+            return property.getExample() != null ? property.getExample() : "string";
+        } else if (property instanceof EmailProperty) {
+            return property.getExample() != null ? property.getExample() : "user@example.com";
+        } else if (property instanceof PasswordProperty) {
+            return property.getExample() != null ? property.getExample() : "password";
+        } else if (property instanceof UUIDProperty) {
+            return property.getExample() != null ? property.getExample() : "123e4567-e89b-12d3-a456-426614174000";
+        } else if (property instanceof RefProperty) {
+            RefProperty refProperty = (RefProperty) property;
+            Model refModel = resolveSwagger2SchemaReference(refProperty.get$ref());
+            return generateExampleFromSwagger2Schema(refModel);
+        } else {
+            return null;
+        }
+    }
+
+    // 新增方法，用于解析$ref引用的Swagger 2.0 Schema
+    private static io.swagger.models.Model resolveSwagger2SchemaReference(String ref) {
+        // 实现解析逻辑，例如从Swagger对象中获取引用的Schema
+        // 这里假设有一个全局的Swagger对象
+        return swagger.getDefinitions().get(ref.replace("#/definitions/", ""));
+    }
+
+    private static Object getDefaultExampleValueForSwagger2(io.swagger.models.Model schema) {
+        if (schema instanceof io.swagger.models.ModelImpl) {
+            return schema.getExample() != null ? schema.getExample() : new HashMap<>();
+        } else if (schema instanceof io.swagger.models.properties.ArrayProperty) {
+            return schema.getExample() != null ? schema.getExample() : new Object[]{};
+        } else if (schema instanceof io.swagger.models.properties.StringProperty) {
+            if (schema.getExample() != null) {
+                return schema.getExample();
+            } else if (((StringProperty) schema).getEnum() != null && !((StringProperty) schema).getEnum().isEmpty()) {
+                return ((StringProperty) schema).getEnum().get(0).toString();
+            } else {
+                return "string";
+            }
+        } else if (schema instanceof io.swagger.models.properties.IntegerProperty) {
+            return schema.getExample() != null ? schema.getExample() : 0;
+        } else if (schema instanceof io.swagger.models.properties.BooleanProperty) {
+            return schema.getExample() != null ? schema.getExample() : true;
+//        } else if (schema instanceof io.swagger.models.properties.NumberProperty) {
+//            return schema.getExample() != null ? schema.getExample() : 0;
+        } else if (schema instanceof io.swagger.models.properties.DateProperty) {
+            return schema.getExample() != null ? schema.getExample() : LocalDate.now().toString();
+        } else if (schema instanceof io.swagger.models.properties.DateTimeProperty) {
+            return schema.getExample() != null ? schema.getExample() : LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"));
+        } else if (schema instanceof io.swagger.models.properties.BinaryProperty) {
+            return schema.getExample() != null ? schema.getExample() : "string";
+        } else if (schema instanceof io.swagger.models.properties.ByteArrayProperty) {
+            return schema.getExample() != null ? schema.getExample() : "string";
+        } else if (schema instanceof io.swagger.models.properties.EmailProperty) {
+            return schema.getExample() != null ? schema.getExample() : "user@example.com";
+        } else if (schema instanceof io.swagger.models.properties.FileProperty) {
+            return schema.getExample() != null ? schema.getExample() : "string";
+        } else if (schema instanceof io.swagger.models.properties.PasswordProperty) {
+            return schema.getExample() != null ? schema.getExample() : "string";
+        } else if (schema instanceof io.swagger.models.properties.UUIDProperty) {
+            return schema.getExample() != null ? schema.getExample() : "123e4567-e89b-12d3-a456-426614174000";
+        } else if (schema instanceof io.swagger.models.properties.MapProperty) {
+            return schema.getExample() != null ? schema.getExample() : new HashMap<>();
+        } else {
+            return null;
+        }
     }
 
     private static Object generateExampleFromSchema(Schema<?> schema) {
