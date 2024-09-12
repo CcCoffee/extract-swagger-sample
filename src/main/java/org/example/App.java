@@ -3,19 +3,14 @@ package org.example;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.Paths;
-import io.swagger.v3.oas.models.media.ArraySchema;
-import io.swagger.v3.oas.models.media.BooleanSchema;
-import io.swagger.v3.oas.models.media.Content;
-import io.swagger.v3.oas.models.media.IntegerSchema;
-import io.swagger.v3.oas.models.media.MediaType;
-import io.swagger.v3.oas.models.media.NumberSchema;
-import io.swagger.v3.oas.models.media.ObjectSchema;
-import io.swagger.v3.oas.models.media.Schema;
-import io.swagger.v3.oas.models.media.StringSchema;
+import io.swagger.v3.oas.models.media.*;
 import io.swagger.v3.parser.OpenAPIV3Parser;
 import io.swagger.v3.parser.core.models.SwaggerParseResult;
 
 import java.io.IOException;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -62,7 +57,7 @@ public class App {
                 String ref = schema.get$ref();
                 Schema<?> refSchema = resolveSchemaReference(ref);
                 return generateExampleFromSchema(refSchema);
-            } else {
+            } else if (schema.get$ref() != null) {
                 schema.getProperties().forEach((key, value) -> {
                     Schema<?> propertySchema = (Schema<?>) value;
                     example.put(key, generateExampleFromSchema(propertySchema));
@@ -76,7 +71,7 @@ public class App {
                 String ref = schema.get$ref();
                 Schema<?> refSchema = resolveSchemaReference(ref);
                 return generateExampleFromSchema(refSchema);
-            } else {
+            } else if (schema.getProperties() != null) {
                 schema.getProperties().forEach((key, value) -> {
                     Schema<?> propertySchema = (Schema<?>) value;
                     example.put(key, generateExampleFromSchema(propertySchema));
@@ -117,7 +112,23 @@ public class App {
         } else if (schema instanceof BooleanSchema) {
             return schema.getExample() != null ? schema.getExample() : true;
         } else if (schema instanceof NumberSchema) {
-            return schema.getExample() != null ? schema.getExample() : 0.0;
+            return schema.getExample() != null ? schema.getExample() : 0;
+        } else if (schema instanceof DateSchema) {
+            return schema.getExample() != null ? schema.getExample() : LocalDate.now().toString();
+        } else if (schema instanceof DateTimeSchema) {
+            return schema.getExample() != null ? schema.getExample() : LocalDateTime.now().format(DateTimeFormatter.ISO_DATE_TIME);
+        } else if (schema instanceof BinarySchema) {
+            return schema.getExample() != null ? schema.getExample() : "string";
+        } else if (schema instanceof ByteArraySchema) {
+            return schema.getExample() != null ? schema.getExample() : "string";
+        } else if (schema instanceof EmailSchema) {
+            return schema.getExample() != null ? schema.getExample() : "user@example.com";
+        } else if (schema instanceof PasswordSchema) {
+            return schema.getExample() != null ? schema.getExample() : "string";
+        } else if (schema instanceof UUIDSchema) {
+            return schema.getExample() != null ? schema.getExample() : "123e4567-e89b-12d3-a456-426614174000";
+        } else if (schema instanceof MapSchema) {
+            return schema.getExample() != null ? schema.getExample() : new HashMap<>();
         } else {
             return null;
         }
