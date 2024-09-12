@@ -50,7 +50,18 @@ public class App {
     }
 
     private static Object generateExampleFromSchema(Schema<?> schema) {
-        if (schema.getType() == null) {
+        if (schema instanceof ComposedSchema) {
+             ComposedSchema composedSchema = (ComposedSchema) schema;
+             if (composedSchema.getAllOf()!= null && !composedSchema.getAllOf().isEmpty()) {
+                 return generateExampleFromSchema(composedSchema.getAllOf().get(0));
+             } else if (composedSchema.getOneOf()!= null && !composedSchema.getOneOf().isEmpty()) {
+                 return generateExampleFromSchema(composedSchema.getOneOf().get(0));
+             } else if (composedSchema.getAnyOf()!= null && !composedSchema.getAnyOf().isEmpty()) {
+                 return generateExampleFromSchema(composedSchema.getAnyOf().get(0));
+             } else {
+                 return getDefaultExampleValue(schema);
+             }
+        } else if (schema.getType() == null) {
             Map<String, Object> example = new HashMap<>();
             if (schema.get$ref() != null) {
                 // 获取引用的Schema
@@ -62,6 +73,8 @@ public class App {
                     Schema<?> propertySchema = (Schema<?>) value;
                     example.put(key, generateExampleFromSchema(propertySchema));
                 });
+            } else if (schema.getNot() != null) {
+                return generateExampleFromSchema(schema.getNot());
             }
             return example;
         } else if (schema instanceof ObjectSchema) {

@@ -791,6 +791,18 @@ components:
         notString:
           not:
             type: string
+        oneOf:
+          oneOf:
+            - $ref: '#/components/schemas/Category'
+            - $ref: '#/components/schemas/Tag'
+        anyOf:
+          anyOf:
+            - $ref: '#/components/schemas/Category'
+            - $ref: '#/components/schemas/Tag'
+        allOf:
+          allOf:
+            - $ref: '#/components/schemas/Category'
+            - $ref: '#/components/schemas/Tag'
     ApiResponse:
       type: object
       properties:
