@@ -729,38 +729,68 @@ components:
         - photoUrls
       type: object
       properties:
-        id:
+        IntegerSchemaWithInt64Format:
           type: integer
           format: int64
-          example: 10
-        name:
+        IntegerSchemaWithoutInt32:
+          type: integer
+        IntegerSchemaWithInt32:
+          type: integer
+          format: int32
+        NumberSchema:
+          type: number
+        BooleanSchema:
+          type: boolean
+        StringSchema:
           type: string
-          example: doggie
-        category:
-          $ref: '#/components/schemas/Category'
-        photoUrls:
-          type: array
-          xml:
-            wrapped: true
-          items:
-            type: string
-            xml:
-              name: photoUrl
-        tags:
-          type: array
-          xml:
-            wrapped: true
-          items:
-            $ref: '#/components/schemas/Tag'
-        status:
+        DateTimeSchema:
+          type: string
+          format: date-time
+        DateSchema:
+          type: string
+          format: date
+        BinarySchema:
+          type: string
+          format: binary
+        FileSchema:
+          type: string
+          format: binary
+        ByteArraySchema:
+          type: string
+          format: byte
+        EmailSchema:
+          type: string
+          format: email
+        PasswordSchema:
+          type: string
+          format: password
+        UUIDSchema:
+          type: string
+          format: uuid
+        enum:
           type: string
           description: pet status in the store
           enum:
             - available
             - pending
             - sold
-      xml:
-        name: pet
+        MapSchema:
+          type: object
+        ObjectSchema:
+          $ref: '#/components/schemas/Category'
+        ObjectSchemaWithTypeOnly:
+          type: object
+        ArraySchemaWithStringItem:
+          type: array
+          items:
+            type: string
+        ArraySchemaWithRef:
+          type: array
+          items:
+            $ref: '#/components/schemas/Tag'
+        notString:
+          not:
+            type: string
     ApiResponse:
       type: object
       properties:
