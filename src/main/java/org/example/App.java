@@ -1,12 +1,17 @@
 package org.example;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.Paths;
 import io.swagger.v3.oas.models.media.*;
 import io.swagger.v3.parser.OpenAPIV3Parser;
 import io.swagger.v3.parser.core.models.SwaggerParseResult;
+import io.swagger.models.Swagger;
+import io.swagger.parser.SwaggerParser;
 
+import java.io.File;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -19,12 +24,14 @@ import java.util.Map;
  */
 public class App {
     public static OpenAPI openAPI;
+    public static Swagger swagger;
 
     public static void main(String[] args) {
         System.out.println("Hello World!");
 
         try {
-            String sampleResponse = getSampleResponse("src/main/resources/static/api.yml", "/pet");
+//            String sampleResponse = getSampleResponse("src/main/resources/static/api.yml", "/pet");
+            String sampleResponse = getSampleResponse("src/main/resources/static/swagger-2.0.yml", "/pet");
             System.out.println(sampleResponse);
         } catch (IOException e) {
             e.printStackTrace();
@@ -32,10 +39,36 @@ public class App {
     }
 
     public static String getSampleResponse(String apiJsonPath, String endpoint) throws IOException {
-        SwaggerParseResult result = new OpenAPIV3Parser().readLocation(apiJsonPath, null, null);
-        openAPI = result.getOpenAPI();
-        Paths paths = openAPI.getPaths();
+        if (isOAS3(apiJsonPath)) {
+            SwaggerParseResult result = new OpenAPIV3Parser().readLocation(apiJsonPath, null, null);
+            openAPI = result.getOpenAPI();
+            return getOAS3SampleResponse(endpoint);
+        } else {
+            swagger = new SwaggerParser().read(apiJsonPath);
+            return getSwagger2SampleResponse(endpoint);
+        }
+    }
 
+    private static boolean isOAS3(String apiJsonPath) throws IOException {
+        ObjectMapper mapper;
+        if (apiJsonPath.toLowerCase().endsWith(".yml") || apiJsonPath.toLowerCase().endsWith(".yaml")) {
+            mapper = new ObjectMapper(new YAMLFactory());
+        } else {
+            mapper = new ObjectMapper();
+        }
+
+        JsonNode rootNode = mapper.readTree(new File(apiJsonPath));
+        if (rootNode.has("openapi")) {
+            return true;
+        } else if (rootNode.has("swagger")) {
+            return false;
+        } else {
+            throw new IllegalArgumentException("Unknown API specification format");
+        }
+    }
+
+    private static String getOAS3SampleResponse(String endpoint) throws IOException {
+        Paths paths = openAPI.getPaths();
         Content content = paths.get(endpoint).getPost().getResponses().get("200").getContent();
         MediaType mediaType = content.get("application/json");
         Object example = mediaType.getExample();
@@ -47,6 +80,26 @@ public class App {
 
         ObjectMapper mapper = new ObjectMapper();
         return mapper.writerWithDefaultPrettyPrinter().writeValueAsString(example);
+    }
+
+    private static String getSwagger2SampleResponse(String endpoint) throws IOException {
+        io.swagger.models.Path path = swagger.getPath(endpoint);
+        io.swagger.models.Response response = path.getPost().getResponses().get("200");
+        Object example = response.getExamples().get("application/json");
+
+        if (example == null) {
+            io.swagger.models.Model schema = response.getResponseSchema();
+            example = generateExampleFromSwagger2Schema(schema);
+        }
+
+        ObjectMapper mapper = new ObjectMapper();
+        return mapper.writerWithDefaultPrettyPrinter().writeValueAsString(example);
+    }
+
+    private static Object generateExampleFromSwagger2Schema(io.swagger.models.Model schema) {
+        // 实现Swagger 2.0的示例生成逻辑
+        // 类似于generateExampleFromSchema方法
+        return null; // 具体实现略
     }
 
     private static Object generateExampleFromSchema(Schema<?> schema) {
