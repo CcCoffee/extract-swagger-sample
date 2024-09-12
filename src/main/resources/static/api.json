@@ -85,8 +85,11 @@
                     "eval_count": {
                       "type": "integer"
                     },
-                    "eval_duration": {
-                      "type": "integer"
+                    "model_array": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Model"
+                      }
                     },
                     "context": {
                       "type": "array",

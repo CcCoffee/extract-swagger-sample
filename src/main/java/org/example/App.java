@@ -15,14 +15,13 @@ import java.util.Map;
 
 /**
  * Hello world!
- *
  */
-public class App 
-{
-    public static void main( String[] args )
-    {
-        System.out.println( "Hello World!" );
-        
+public class App {
+    public static OpenAPI openAPI;
+
+    public static void main(String[] args) {
+        System.out.println("Hello World!");
+
         try {
             String sampleResponse = getSampleResponse("src/main/resources/static/api.json", "/api/generate");
             System.out.println(sampleResponse);
@@ -33,18 +32,18 @@ public class App
 
     public static String getSampleResponse(String apiJsonPath, String endpoint) throws IOException {
         SwaggerParseResult result = new OpenAPIV3Parser().readLocation(apiJsonPath, null, null);
-        OpenAPI openAPI = result.getOpenAPI();
+        openAPI = result.getOpenAPI();
         Paths paths = openAPI.getPaths();
-        
+
         Content content = paths.get(endpoint).getPost().getResponses().get("200").getContent();
         MediaType mediaType = content.get("application/json");
         Object example = mediaType.getExample();
-        
+
         if (example == null) {
             Schema<?> schema = mediaType.getSchema();
             example = generateExampleFromSchema(schema);
         }
-        
+
         ObjectMapper mapper = new ObjectMapper();
         return mapper.writerWithDefaultPrettyPrinter().writeValueAsString(example);
     }
@@ -52,10 +51,17 @@ public class App
     private static Object generateExampleFromSchema(Schema<?> schema) {
         if (schema.getType().equals("object")) {
             Map<String, Object> example = new HashMap<>();
-            schema.getProperties().forEach((key, value) -> {
-                Schema<?> propertySchema = (Schema<?>) value;
-                example.put(key, generateExampleFromSchema(propertySchema));
-            });
+            if (schema.get$ref() != null) {
+                // 获取引用的Schema
+                String ref = schema.get$ref();
+                Schema<?> refSchema = resolveSchemaReference(ref);
+                return generateExampleFromSchema(refSchema);
+            } else {
+                schema.getProperties().forEach((key, value) -> {
+                    Schema<?> propertySchema = (Schema<?>) value;
+                    example.put(key, generateExampleFromSchema(propertySchema));
+                });
+            }
             return example;
         } else if (schema.getType().equals("array")) {
             Map<String, Object> example = new HashMap<>();
@@ -67,6 +73,13 @@ public class App
         } else {
             return getDefaultExampleValue(schema);
         }
+    }
+
+    // 新增方法，用于解析$ref引用的Schema
+    private static Schema<?> resolveSchemaReference(String ref) {
+        // 实现解析逻辑，例如从OpenAPI对象中获取引用的Schema
+        // 这里假设有一个全局的OpenAPI对象
+        return openAPI.getComponents().getSchemas().get(ref.replace("#/components/schemas/", ""));
     }
 
     private static Object getDefaultExampleValue(Schema<?> schema) {
