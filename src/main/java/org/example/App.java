@@ -10,6 +10,10 @@ import io.swagger.v3.parser.OpenAPIV3Parser;
 import io.swagger.v3.parser.core.models.SwaggerParseResult;
 import io.swagger.models.Swagger;
 import io.swagger.parser.SwaggerParser;
+import io.swagger.v3.oas.models.Operation;
+import io.swagger.v3.oas.models.responses.ApiResponse;
+import io.swagger.v3.oas.models.responses.ApiResponses;
+import io.swagger.models.HttpMethod;
 
 import java.io.File;
 import java.io.IOException;
@@ -30,23 +34,25 @@ public class App {
         System.out.println("Hello World!");
 
         try {
-//            String sampleResponse = getSampleResponse("src/main/resources/static/api.yml", "/pet");
-            String sampleResponse = getSampleResponse("src/main/resources/static/swagger-2.0.yml", "/pet");
+            Map<HttpMethod,String> sampleResponse = getSampleResponse("src/main/resources/static/api.yml", "/pet");
+            // Map<HttpMethod,String> sampleResponse = getSampleResponse("src/main/resources/static/swagger-2.0.yml", "/pet");;
             System.out.println(sampleResponse);
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    public static String getSampleResponse(String apiJsonPath, String endpoint) throws IOException {
+    public static Map<HttpMethod, String> getSampleResponse(String apiJsonPath, String endpoint) throws IOException {
+        Map<HttpMethod, String> responses = new HashMap<>();
         if (isOAS3(apiJsonPath)) {
             SwaggerParseResult result = new OpenAPIV3Parser().readLocation(apiJsonPath, null, null);
             openAPI = result.getOpenAPI();
-            return getOAS3SampleResponse(endpoint);
+            responses.putAll(getOAS3SampleResponse(endpoint));
         } else {
             swagger = new SwaggerParser().read(apiJsonPath);
-            return getSwagger2SampleResponse(endpoint);
+            responses.putAll(getSwagger2SampleResponse(endpoint));
         }
+        return responses;
     }
 
     private static boolean isOAS3(String apiJsonPath) throws IOException {
@@ -67,9 +73,23 @@ public class App {
         }
     }
 
-    private static String getOAS3SampleResponse(String endpoint) throws IOException {
+    private static Map<HttpMethod, String> getOAS3SampleResponse(String endpoint) throws IOException {
+        Map<HttpMethod, String> responses = new HashMap<>();
         Paths paths = openAPI.getPaths();
-        Content content = paths.get(endpoint).getPost().getResponses().get("200").getContent();
+        paths.get(endpoint).readOperationsMap().forEach((method, operation) -> {
+            try {
+                responses.put(HttpMethod.valueOf(method.name()), getOAS3ResponseForOperation(operation));
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        });
+        return responses;
+    }
+
+    private static String getOAS3ResponseForOperation(Operation operation) throws IOException {
+        ApiResponses apiResponses = operation.getResponses();
+        ApiResponse apiResponse = apiResponses.get("200");
+        Content content = apiResponse.getContent();
         MediaType mediaType = content.get("application/json");
         Object example = mediaType.getExample();
 
@@ -82,9 +102,21 @@ public class App {
         return mapper.writerWithDefaultPrettyPrinter().writeValueAsString(example);
     }
 
-    private static String getSwagger2SampleResponse(String endpoint) throws IOException {
+    private static Map<HttpMethod, String> getSwagger2SampleResponse(String endpoint) throws IOException {
+        Map<HttpMethod, String> responses = new HashMap<>();
         io.swagger.models.Path path = swagger.getPath(endpoint);
-        io.swagger.models.Response response = path.getPost().getResponses().get("200");
+        path.getOperationMap().forEach((method, operation) -> {
+            try {
+                responses.put(method, getSwagger2ResponseForOperation(operation));
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        });
+        return responses;
+    }
+
+    private static String getSwagger2ResponseForOperation(io.swagger.models.Operation operation) throws IOException {
+        io.swagger.models.Response response = operation.getResponses().get("200");
         Object example = response.getExamples().get("application/json");
 
         if (example == null) {
