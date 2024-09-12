@@ -1,0 +1,122 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "ollama API",
+    "description": "API for interacting with ollama models",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/api/generate": {
+      "post": {
+        "summary": "Generate a completion",
+        "description": "Generate a response for a given prompt with a provided model. This is a streaming endpoint.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "model": {
+                    "type": "string",
+                    "description": "The model name (required)"
+                  },
+                  "prompt": {
+                    "type": "string",
+                    "description": "The prompt to generate a response for"
+                  },
+                  "options": {
+                    "type": "object",
+                    "description": "Additional model parameters"
+                  },
+                  "system": {
+                    "type": "string",
+                    "description": "System prompt to override the model's definition"
+                  },
+                  "template": {
+                    "type": "string",
+                    "description": "The full prompt or prompt template to override the model's definition"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "A stream of JSON objects",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "model": {
+                      "type": "object",
+                      "$ref": "#/components/schemas/Model"
+                    },
+                    "created_at": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "response": {
+                      "type": "string"
+                    },
+                    "done": {
+                      "type": "boolean"
+                    },
+                    "total_duration": {
+                      "type": "integer"
+                    },
+                    "load_duration": {
+                      "type": "integer"
+                    },
+                    "sample_count": {
+                      "type": "integer"
+                    },
+                    "sample_duration": {
+                      "type": "integer"
+                    },
+                    "prompt_eval_count": {
+                      "type": "integer"
+                    },
+                    "prompt_eval_duration": {
+                      "type": "integer"
+                    },
+                    "eval_count": {
+                      "type": "integer"
+                    },
+                    "eval_duration": {
+                      "type": "integer"
+                    },
+                    "context": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Model": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "example": 23
+          }
+        }
+      }
+    }
+  }
+}
