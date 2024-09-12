@@ -3,6 +3,7 @@ package org.example;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.Paths;
+import io.swagger.v3.oas.models.media.ArraySchema;
 import io.swagger.v3.oas.models.media.Content;
 import io.swagger.v3.oas.models.media.MediaType;
 import io.swagger.v3.oas.models.media.Schema;
@@ -23,7 +24,7 @@ public class App {
         System.out.println("Hello World!");
 
         try {
-            String sampleResponse = getSampleResponse("src/main/resources/static/api.json", "/api/generate");
+            String sampleResponse = getSampleResponse("src/main/resources/static/api.yml", "/pet");
             System.out.println(sampleResponse);
         } catch (IOException e) {
             e.printStackTrace();
@@ -64,12 +65,15 @@ public class App {
             }
             return example;
         } else if (schema.getType().equals("array")) {
-            Map<String, Object> example = new HashMap<>();
-            schema.getProperties().forEach((key, value) -> {
-                Schema<?> propertySchema = (Schema<?>) value;
-                example.put(key, generateExampleFromSchema(propertySchema));
-            });
-            return new Object[]{example};
+            Schema<?> itemsSchema = ((ArraySchema)schema).getItems();
+            if (itemsSchema.get$ref() != null) {
+                // 获取引用的Schema
+                String ref = itemsSchema.get$ref();
+                Schema<?> refSchema = resolveSchemaReference(ref);
+                return new Object[]{generateExampleFromSchema(refSchema)};
+            } else {
+                return new Object[]{generateExampleFromSchema(itemsSchema)};
+            }
         } else {
             return getDefaultExampleValue(schema);
         }
